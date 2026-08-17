@@ -1303,11 +1303,27 @@ function App() {
       return next;
     });
   const confirmPurchase = (id, actual, date) =>
-    save((a) =>
-      a.map((x) =>
-        x.id === id ? { ...x, after: +actual, date, bought: true } : x,
-      ),
-    );
+    save((current) => {
+      const purchased = current.find((item) => item.id === id);
+      if (!purchased) return current;
+
+      const stockItem = uniqueStockItems(current).find(
+        (item) => stockKey(item) === stockKey(purchased),
+      );
+      const purchasedQty = Math.max(0, Number(purchased.qty) || 0);
+
+      return current.map((item) => {
+        const purchaseUpdate =
+          item.id === id
+            ? { after: +actual, date, bought: true }
+            : {};
+        const stockUpdate =
+          stockItem && item.id === stockItem.id
+            ? { stock: Number(item.stock || 0) + purchasedQty }
+            : {};
+        return { ...item, ...purchaseUpdate, ...stockUpdate };
+      });
+    });
   const undo = (id) =>
     save((a) => a.map((x) => (x.id === id ? { ...x, bought: false } : x)));
   const remove = (id) => save((a) => a.filter((x) => x.id !== id));
