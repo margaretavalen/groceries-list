@@ -424,8 +424,8 @@ function Stock({ items, manage }) {
     <section className="panel stock">
       <div className="panel-head">
         <div>
-          <h2>Daftar Stok Semua Item</h2>
-          <p>{rows.length} barang · termasuk stok kosong</p>
+          <h2>Daftar Stok</h2>
+          <p>{rows.length} barang</p>
         </div>
         <button className="text-btn" onClick={manage}>
           <Plus /> Kelola stok
