@@ -502,17 +502,17 @@ function StockModal({ items, close, saveStocks }) {
     </div>
   );
 }
-function WishlistPage({ items, open, moveToList, remove }) {
+function WishlistPage({ items, open, moveToList, buy, remove }) {
   const [priorityFilter, setPriorityFilter] = useState("semua");
   const [kindFilter, setKindFilter] = useState("semua");
   const wishlist = useMemo(
-    () => items.filter(isWishlist).filter((item) => {
+    () => items.filter((item) => isWishlist(item) && !item.bought).filter((item) => {
       const meta = wishlistMeta(item);
       return (priorityFilter === "semua" || meta.priority === priorityFilter) && (kindFilter === "semua" || meta.kind === kindFilter);
     }),
     [items, priorityFilter, kindFilter],
   );
-  const counts = items.filter(isWishlist).reduce((result, item) => {
+  const counts = items.filter((item) => isWishlist(item) && !item.bought).reduce((result, item) => {
     const { priority } = wishlistMeta(item);
     result[priority] = (result[priority] || 0) + 1;
     return result;
@@ -528,7 +528,7 @@ function WishlistPage({ items, open, moveToList, remove }) {
         <div><label>Prioritas<select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}><option value="semua">Semua</option><option value="tinggi">Tinggi</option><option value="sedang">Sedang</option><option value="rendah">Rendah</option></select></label><label>Jenis<select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)}><option value="semua">Semua</option><option value="kebutuhan">Kebutuhan</option><option value="keinginan">Keinginan</option></select></label></div>
         <span>{wishlist.length} barang</span>
       </section>
-      {wishlist.length ? <section className="wishlist-grid">{wishlist.map((item) => { const meta = wishlistMeta(item); return <article className="wishlist-card" key={item.id}><div className="wishlist-card-top"><span className="wishlist-category"><i style={{ background: colorFor(item.category) }} />{item.category}</span><span className={`priority ${meta.priority}`}>{meta.priority}</span></div><div className="wishlist-card-icon"><Heart /></div><h2>{item.name}</h2><div className="wishlist-kind"><span>{meta.kind === "kebutuhan" ? "Kebutuhan" : "Keinginan"}</span><strong>{rupiah(item.before)}</strong></div><div className="wishlist-actions"><button className="move-wishlist" onClick={() => moveToList(item.id)}><ArrowRight /> Pindah ke belanja</button><button className="ghost" aria-label={`Hapus ${item.name}`} onClick={() => remove(item.id)}><Trash2 /></button></div></article>})}</section> : <section className="wishlist-empty"><Heart /><h2>Wishlist masih kosong</h2><p>Tambahkan barang yang ingin kamu beli nanti.</p><button className="primary" onClick={open}><Plus /> Tambah wishlist</button></section>}
+      {wishlist.length ? <section className="wishlist-grid">{wishlist.map((item) => { const meta = wishlistMeta(item); return <article className="wishlist-card" key={item.id}><div className="wishlist-card-top"><span className="wishlist-category"><i style={{ background: colorFor(item.category) }} />{item.category}</span><span className={`priority ${meta.priority}`}>{meta.priority}</span></div><div className="wishlist-card-icon"><Heart /></div><h2>{item.name}</h2><div className="wishlist-kind"><span>{meta.kind === "kebutuhan" ? "Kebutuhan" : "Keinginan"}</span><strong>{rupiah(item.before)}</strong></div><div className="wishlist-buy-actions"><button className="buy-wishlist" onClick={() => buy(item)}><Check /> Sudah dibeli</button><button className="move-wishlist" onClick={() => moveToList(item.id)}><ArrowRight /> Ke daftar belanja</button></div><button className="wishlist-delete ghost" aria-label={`Hapus ${item.name}`} onClick={() => remove(item.id)}><Trash2 /></button></article>})}</section> : <section className="wishlist-empty"><Heart /><h2>Wishlist masih kosong</h2><p>Tambahkan barang yang ingin kamu beli nanti.</p><button className="primary" onClick={open}><Plus /> Tambah wishlist</button></section>}
     </main>
   );
 }
@@ -1153,7 +1153,7 @@ function Modal({ close, add }) {
 }
 function PurchaseModal({ item, close, confirm }) {
   const [actual, setActual] = useState(item.after || item.before || 0);
-  const [date, setDate] = useState(item.date || "2026-08-17");
+  const [date, setDate] = useState(item.date || todayValue());
   const diff = (item.before || 0) - actual;
   return (
     <div
@@ -1278,7 +1278,7 @@ function App() {
       {page === "history" ? (
         <HistoryPage items={items} undo={undo} />
       ) : page === "wishlist" ? (
-        <WishlistPage items={items} open={() => setWishlistModal(true)} moveToList={moveWishlist} remove={remove} />
+        <WishlistPage items={items} open={() => setWishlistModal(true)} moveToList={moveWishlist} buy={setCheckoutItem} remove={remove} />
       ) : (
         <main>
           <Hero items={items} />
