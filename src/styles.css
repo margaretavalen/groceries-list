@@ -1930,3 +1930,18 @@ nav button>svg {
     .head-actions { gap: 7px }
     header nav { right: 4px; width: min(220px, calc(100vw - 24px)) }
 }
+
+.stock-modal { width: min(680px, 100%) }
+.stock-editor-list { max-height: 290px; overflow: auto; border: 1px solid var(--line); border-radius: 16px }
+.stock-editor-row { display: grid; grid-template-columns: 10px 1fr 34px 62px 34px; align-items: center; gap: 9px; min-height: 58px; padding: 8px 12px; border-bottom: 1px solid #eceee7 }
+.stock-editor-row:last-child { border-bottom: 0 }
+.stock-editor-row>div { display: flex; flex-direction: column }
+.stock-editor-row b { font-size: 12px }
+.stock-editor-row small { font-size: 9px; color: var(--muted) }
+.stock-editor-row button { width: 34px; height: 34px; border: 0; border-radius: 10px; background: #edf3e6; color: var(--sage); font-size: 18px }
+.stock-editor-row input { width: 62px; height: 36px; padding: 0 5px; text-align: center; border: 1px solid var(--line); border-radius: 10px }
+.manual-stock { margin-top: 18px; padding: 16px; border-radius: 17px; background: #f5f7f1 }
+.manual-stock h3 { margin: 0 0 12px; font-family: 'Libre Caslon Text', serif; font-size: 15px; font-weight: 400 }
+.manual-stock .form-grid { grid-template-columns: 1.2fr 1fr .65fr; margin-top: 0 }
+.manual-stock>small { display: block; margin-top: 10px; color: var(--muted); font-size: 9px }
+@media(max-width:600px) { .manual-stock .form-grid { grid-template-columns: 1fr } .stock-editor-row { grid-template-columns: 8px 1fr 32px 54px 32px; gap: 6px; padding-left: 9px; padding-right: 9px } .stock-editor-row input { width: 54px } }

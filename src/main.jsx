@@ -210,6 +210,7 @@ const todayValue = () => {
   const offset = now.getTimezoneOffset() * 60000;
   return new Date(now - offset).toISOString().slice(0, 10);
 };
+const isStockOnly = (item) => item.unit === "stok-manual";
 
 function IconBox({ tone = "green", children }) {
   return <span className={"icon-box " + tone}>{children}</span>;
@@ -290,7 +291,7 @@ function Header({ open, page, setPage }) {
   );
 }
 function Hero({ items, categories = cats }) {
-  const active = items.filter((x) => !x.bought).length,
+  const active = items.filter((x) => !x.bought && !isStockOnly(x)).length,
     stock = items.reduce((s, x) => s + x.stock, 0),
     spent = items.filter((x) => x.bought).reduce((s, x) => s + x.after, 0);
   return (
@@ -333,7 +334,7 @@ function GroceryList({ items, checkout, remove, open }) {
   const grouped = useMemo(
     () =>
       Object.groupBy(
-        items.filter((x) => !x.bought),
+        items.filter((x) => !x.bought && !isStockOnly(x)),
         (x) => x.category,
       ),
     [items],
@@ -400,7 +401,7 @@ function GroceryList({ items, checkout, remove, open }) {
     </section>
   );
 }
-function Stock({ items }) {
+function Stock({ items, manage }) {
   const rows = cats
     .map((c) => ({
       c,
@@ -417,6 +418,9 @@ function Stock({ items }) {
           <h2>Ringkasan Stok</h2>
           <p>Yang tersedia di rumah</p>
         </div>
+        <button className="text-btn" onClick={manage}>
+          <Plus /> Kelola stok
+        </button>
       </div>
       {rows.map((x) => (
         <div className="stock-row" key={x.c}>
@@ -434,6 +438,54 @@ function Stock({ items }) {
         </div>
       ))}
     </section>
+  );
+}
+function StockModal({ items, close, saveStocks }) {
+  const [values, setValues] = useState(() =>
+    Object.fromEntries(items.map((item) => [item.id, item.stock || 0])),
+  );
+  const [manual, setManual] = useState({ name: "", category: cats[0], stock: 1 });
+  const stockItems = items;
+  return (
+    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+      <form
+        className="modal stock-modal"
+        onSubmit={(e) => {
+          e.preventDefault();
+          saveStocks(values, manual.name.trim() ? manual : null);
+          close();
+        }}
+      >
+        <div className="modal-head">
+          <div>
+            <h2>Kelola stok</h2>
+            <p>Edit jumlah yang tersedia atau tambahkan stok manual.</p>
+          </div>
+          <button type="button" className="ghost" onClick={close}><X /></button>
+        </div>
+        <div className="stock-editor-list">
+          {stockItems.map((item) => (
+            <div className="stock-editor-row" key={item.id}>
+              <span className="dot" style={{ background: colorFor(item.category) }} />
+              <div><b>{item.name}</b><small>{item.category}</small></div>
+              <button type="button" onClick={() => setValues((current) => ({ ...current, [item.id]: Math.max(0, +(current[item.id] || 0) - 1) }))}>−</button>
+              <input aria-label={`Stok ${item.name}`} type="number" min="0" value={values[item.id] ?? 0} onChange={(e) => setValues((current) => ({ ...current, [item.id]: Math.max(0, +e.target.value) }))} />
+              <button type="button" onClick={() => setValues((current) => ({ ...current, [item.id]: +(current[item.id] || 0) + 1 }))}>+</button>
+            </div>
+          ))}
+        </div>
+        <div className="manual-stock">
+          <h3>Tambah stok manual</h3>
+          <div className="form-grid">
+            <label>Nama barang<input value={manual.name} onChange={(e) => setManual((current) => ({ ...current, name: e.target.value }))} placeholder="Mis. Gula pasir" /></label>
+            <label>Kategori<select value={manual.category} onChange={(e) => setManual((current) => ({ ...current, category: e.target.value }))}>{cats.map((category) => <option key={category}>{category}</option>)}</select></label>
+            <label>Jumlah stok<input type="number" min="0" value={manual.stock} onChange={(e) => setManual((current) => ({ ...current, stock: Math.max(0, +e.target.value) }))} /></label>
+          </div>
+          <small>Kosongkan nama jika hanya ingin mengedit stok yang sudah ada.</small>
+        </div>
+        <div className="modal-actions"><button type="button" className="secondary" onClick={close}>Batal</button><button className="primary"><Check /> Simpan stok</button></div>
+      </form>
+    </div>
   );
 }
 function Calendar({ items }) {
@@ -1120,6 +1172,7 @@ function App() {
   const [page, setPage] = useState("overview");
   const [modal, setModal] = useState(false);
   const [checkoutItem, setCheckoutItem] = useState(null);
+  const [stockModal, setStockModal] = useState(false);
   useEffect(() => {
     let active = true;
     loadGoogleItems()
@@ -1152,6 +1205,12 @@ function App() {
   const remove = (id) => save((a) => a.filter((x) => x.id !== id));
   const add = (f) =>
     save((a) => [{ ...f, id: Date.now(), bought: false }, ...a]);
+  const saveStocks = (values, manual) =>
+    save((current) => {
+      const updated = current.map((item) => ({ ...item, stock: Math.max(0, +(values[item.id] ?? item.stock ?? 0)) }));
+      if (!manual) return updated;
+      return [{ id: Date.now(), name: manual.name, category: manual.category, qty: 0, unit: "stok-manual", before: 0, after: 0, date: "", stock: manual.stock, bought: false }, ...updated];
+    });
   return (
     <>
       <Header open={() => setModal(true)} page={page} setPage={setPage} />
@@ -1168,7 +1227,7 @@ function App() {
               open={() => setModal(true)}
             />
             <div className="right-grid">
-              <Stock items={items} />
+              <Stock items={items} manage={() => setStockModal(true)} />
               <Calendar items={items} />
               <Spending items={items} />
               <History items={items} undo={undo} />
@@ -1184,6 +1243,7 @@ function App() {
         </main>
       )}
       {modal ? <Modal close={() => setModal(false)} add={add} /> : null}
+      {stockModal ? <StockModal items={items} close={() => setStockModal(false)} saveStocks={saveStocks} /> : null}
       {checkoutItem ? (
         <PurchaseModal
           item={checkoutItem}
