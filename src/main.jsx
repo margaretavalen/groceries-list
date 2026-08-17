@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   ListChecks,
   Clock3,
+  Menu,
 } from "lucide-react";
 import "./styles.css";
 
@@ -226,35 +227,40 @@ function Stat({ icon, label, value, note, tone }) {
   );
 }
 function Header({ open, page, setPage }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const choose = (action) => {
+    action();
+    setMenuOpen(false);
+  };
   const goTo = (id) => {
     setPage("overview");
     setTimeout(() => document.getElementById(id)?.scrollIntoView(), 0);
   };
   return (
     <header>
-      <button className="brand" onClick={() => setPage("overview")}>
+      <button className="brand" onClick={() => choose(() => setPage("overview"))}>
         <ShoppingCart />
         <span>Grocerie</span>
       </button>
-      <nav aria-label="Navigasi utama">
+      <nav className={menuOpen ? "open" : ""} aria-label="Navigasi utama">
         <button
           className={page === "overview" ? "active" : ""}
-          onClick={() => setPage("overview")}
+          onClick={() => choose(() => setPage("overview"))}
         >
           <LayoutDashboard />
           <span>Home</span>
         </button>
-        <button onClick={() => goTo("list")}>
+        <button onClick={() => choose(() => goTo("list"))}>
           <ListChecks />
           <span>Groceries</span>
         </button>
-        <button onClick={() => goTo("calendar")}>
+        <button onClick={() => choose(() => goTo("calendar"))}>
           <CalendarDays />
           <span>Calendar</span>
         </button>
         <button
           className={page === "history" ? "active" : ""}
-          onClick={() => setPage("history")}
+          onClick={() => choose(() => setPage("history"))}
         >
           <Clock3 />
           <span>History</span>
@@ -267,6 +273,14 @@ function Header({ open, page, setPage }) {
         </label>
         <button className="primary" onClick={open}>
           <Plus /> Tambah barang
+        </button>
+        <button
+          className="menu-toggle"
+          aria-label={menuOpen ? "Tutup menu" : "Buka menu"}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((value) => !value)}
+        >
+          {menuOpen ? <X /> : <Menu />}
         </button>
       </div>
     </header>
