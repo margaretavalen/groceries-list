@@ -1197,6 +1197,8 @@ function Modal({ close, add }) {
 function PurchaseModal({ item, close, confirm }) {
   const [actual, setActual] = useState(item.after || item.before || 0);
   const [date, setDate] = useState(item.date || todayValue());
+  const [qty, setQty] = useState(item.qty || 1);
+  const [unit, setUnit] = useState(item.unit || "pcs");
   const diff = (item.before || 0) - actual;
   return (
     <div
@@ -1207,7 +1209,7 @@ function PurchaseModal({ item, close, confirm }) {
         className="modal purchase-modal"
         onSubmit={(e) => {
           e.preventDefault();
-          confirm(item.id, actual, date);
+          confirm(item.id, actual, date, qty, unit);
           close();
         }}
       >
@@ -1228,6 +1230,26 @@ function PurchaseModal({ item, close, confirm }) {
           </div>
         </div>
         <div className="form-grid">
+          <label>
+            Jumlah dibeli
+            <input
+              required
+              min="0.01"
+              step="any"
+              type="number"
+              value={qty}
+              onChange={(e) => setQty(+e.target.value)}
+            />
+          </label>
+          <label>
+            Satuan
+            <input
+              required
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              placeholder="pcs"
+            />
+          </label>
           <label>
             Harga aktual dibayar
             <input
@@ -1302,7 +1324,7 @@ function App() {
       saveGoogleItems(next).catch(() => {});
       return next;
     });
-  const confirmPurchase = (id, actual, date) =>
+  const confirmPurchase = (id, actual, date, qty, unit) =>
     save((current) => {
       const purchased = current.find((item) => item.id === id);
       if (!purchased) return current;
@@ -1310,12 +1332,12 @@ function App() {
       const stockItem = uniqueStockItems(current).find(
         (item) => stockKey(item) === stockKey(purchased),
       );
-      const purchasedQty = Math.max(0, Number(purchased.qty) || 0);
+      const purchasedQty = Math.max(0, Number(qty) || 0);
 
       return current.map((item) => {
         const purchaseUpdate =
           item.id === id
-            ? { after: +actual, date, bought: true }
+            ? { after: +actual, date, qty: purchasedQty, unit: unit.trim(), bought: true }
             : {};
         const stockUpdate =
           stockItem && item.id === stockItem.id

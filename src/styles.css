@@ -390,28 +390,41 @@ h2 {
 }
 
 .check {
-    width: 17px;
-    height: 17px;
-    border: 1px solid #9da394;
-    background: white;
+    width: 24px;
+    height: 24px;
+    border: 1.5px solid #aeb6a3;
+    border-radius: 8px;
+    background: #fff;
     padding: 0;
     display: grid;
-    place-items: center
+    place-items: center;
+    color: var(--sage);
+    box-shadow: 0 2px 7px rgba(55, 70, 42, .08);
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease
 }
 
 .check svg {
-    width: 12px;
-    opacity: 0
+    width: 14px;
+    height: 14px;
+    stroke-width: 2.6;
+    opacity: 0;
+    transform: scale(.72);
+    transition: opacity .18s ease, transform .18s ease
 }
 
-.check:hover {
+.check:hover,
+.check:focus-visible {
     border-color: var(--sage);
-    background: var(--sage-soft)
+    background: var(--sage-soft);
+    box-shadow: 0 0 0 4px rgba(109, 139, 77, .12);
+    transform: translateY(-1px);
+    outline: none
 }
 
-.check:hover svg {
+.check:hover svg,
+.check:focus-visible svg {
     opacity: 1;
-    color: var(--sage)
+    transform: scale(1)
 }
 
 .item-name {
@@ -927,10 +940,6 @@ main {
 
 .grocery-row:hover {
     background: #f7f8f3
-}
-
-.check {
-    border-radius: 6px
 }
 
 .add-row {
