@@ -416,41 +416,34 @@ function GroceryList({ items, checkout, remove, open }) {
   );
 }
 function Stock({ items, manage }) {
-  const rows = cats
-    .map((c) => ({
-      c,
-      count: items
-        .filter((x) => x.category === c)
-        .reduce((s, x) => s + x.stock, 0),
-    }))
-    .filter((x) => x.count);
-  const max = Math.max(...rows.map((x) => x.count), 1);
+  const rows = [...items]
+    .filter((item) => !isWishlist(item))
+    .sort((a, b) => (b.stock || 0) - (a.stock || 0) || a.name.localeCompare(b.name));
+  const max = Math.max(...rows.map((item) => item.stock || 0), 1);
   return (
     <section className="panel stock">
       <div className="panel-head">
         <div>
-          <h2>Ringkasan Stok</h2>
-          <p>Yang tersedia di rumah</p>
+          <h2>Daftar Stok Semua Item</h2>
+          <p>{rows.length} barang · termasuk stok kosong</p>
         </div>
         <button className="text-btn" onClick={manage}>
           <Plus /> Kelola stok
         </button>
       </div>
-      {rows.map((x) => (
-        <div className="stock-row" key={x.c}>
-          <span className="dot" style={{ background: colors[x.c] }} />
-          <b>{x.c}</b>
-          <span>{x.count} unit</span>
-          <i>
-            <em
-              style={{
-                width: `${(x.count / max) * 100}%`,
-                background: colors[x.c],
-              }}
-            />
-          </i>
-        </div>
-      ))}
+      <div className="stock-all-list">
+        {rows.map((item) => {
+          const amount = item.stock || 0;
+          const status = amount === 0 ? "Habis" : amount <= 2 ? "Rendah" : "Tersedia";
+          return <div className="stock-item-row" key={item.id}>
+            <span className="stock-item-dot" style={{ background: colorFor(item.category) }} />
+            <div className="stock-item-name"><b>{item.name}</b><small>{item.category}</small></div>
+            <span className={`stock-status ${status.toLowerCase()}`}>{status}</span>
+            <div className="stock-amount"><strong>{amount}</strong><small>{isStockOnly(item) ? "unit" : item.unit}</small></div>
+            <i><em style={{ width: `${(amount / max) * 100}%`, background: colorFor(item.category) }} /></i>
+          </div>;
+        })}
+      </div>
     </section>
   );
 }
