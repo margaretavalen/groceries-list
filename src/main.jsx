@@ -24,6 +24,7 @@ const extraColors=['#8c79a8','#5e9a89','#d2806f','#7794bd','#b48a57','#9b7d90'];
 const colors=new Proxy(baseColors,{get:(target,category)=>target[category]||extraColors[Math.abs(String(category).split('').reduce((sum,char)=>sum+char.charCodeAt(0),0))%extraColors.length]});
 const colorFor=category=>colors[category];
 const rupiah=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n||0);
+const todayValue=()=>{const now=new Date();const offset=now.getTimezoneOffset()*60000;return new Date(now-offset).toISOString().slice(0,10)};
 
 function IconBox({tone='green',children}){return <span className={'icon-box '+tone}>{children}</span>}
 function Stat({icon,label,value,note,tone}){return <div className="stat"><IconBox tone={tone}>{icon}</IconBox><div><span>{label}</span><strong>{value}</strong><small>{note}</small></div></div>}
@@ -54,7 +55,7 @@ function CategoryPicker({value,onChange,onAdd}){
 }
 
 function Modal({close,add}){
- const [form,setForm]=useState({name:'',category:cats[0],qty:1,unit:'pcs',before:'',after:'',stock:0,date:'2026-08-17'});
+ const [form,setForm]=useState({name:'',category:cats[0],qty:1,unit:'pcs',before:'',after:'',stock:0,date:todayValue()});
  const [addingCategory,setAddingCategory]=useState(false);
  const [newCategory,setNewCategory]=useState('');
  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
