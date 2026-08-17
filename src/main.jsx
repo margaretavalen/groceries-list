@@ -214,6 +214,36 @@ const todayValue = () => {
 };
 const isStockOnly = (item) => item.unit === "stok-manual";
 const isWishlist = (item) => String(item.unit || "").startsWith("wishlist|");
+const stockKey = (item) =>
+  `${String(item.name || "").trim().toLowerCase()}|${item.category || ""}`;
+const ensureDepletedShoppingItems = (items) => {
+  const activeKeys = new Set(
+    items
+      .filter((item) => !item.bought && !isStockOnly(item) && !isWishlist(item))
+      .map(stockKey),
+  );
+  let nextId = Math.max(Date.now(), ...items.map((item) => Number(item.id) || 0)) + 1;
+  const replenishment = [];
+
+  items
+    .filter((item) => !isWishlist(item) && Number(item.stock || 0) === 0)
+    .forEach((item) => {
+      const key = stockKey(item);
+      if (activeKeys.has(key)) return;
+      activeKeys.add(key);
+      replenishment.push({
+        ...item,
+        id: nextId++,
+        qty: 1,
+        unit: isStockOnly(item) ? "pcs" : item.unit || "pcs",
+        date: todayValue(),
+        stock: 0,
+        bought: false,
+      });
+    });
+
+  return replenishment.length ? [...replenishment, ...items] : items;
+};
 const wishlistMeta = (item) => {
   const [, priority = "sedang", kind = "keinginan"] = String(item.unit || "").split("|");
   return { priority, kind };
@@ -1225,7 +1255,9 @@ function PurchaseModal({ item, close, confirm }) {
   );
 }
 function App() {
-  const [items, setItems] = useState(savedItems);
+  const [items, setItems] = useState(() =>
+    ensureDepletedShoppingItems(savedItems()),
+  );
   const [page, setPage] = useState("overview");
   const [modal, setModal] = useState(false);
   const [checkoutItem, setCheckoutItem] = useState(null);
@@ -1236,8 +1268,12 @@ function App() {
     loadGoogleItems()
       .then((remote) => {
         if (active && remote) {
-          setItems(remote);
-          localStorage.setItem("grocerie-v1", JSON.stringify(remote));
+          const synchronized = ensureDepletedShoppingItems(remote);
+          setItems(synchronized);
+          localStorage.setItem("grocerie-v1", JSON.stringify(synchronized));
+          if (synchronized !== remote) {
+            saveGoogleItems(synchronized).catch(() => {});
+          }
         }
       })
       .catch(() => {});
@@ -1267,16 +1303,7 @@ function App() {
     save((current) => {
       const updated = current.map((item) => ({ ...item, stock: Math.max(0, +(values[item.id] ?? item.stock ?? 0)) }));
       const withManual = manual ? [{ id: Date.now(), name: manual.name, category: manual.category, qty: 0, unit: "stok-manual", before: 0, after: 0, date: "", stock: manual.stock, bought: false }, ...updated] : updated;
-      const activeKeys = new Set(withManual.filter((item) => !item.bought && !isStockOnly(item) && !isWishlist(item)).map((item) => `${item.name.trim().toLowerCase()}|${item.category}`));
-      const depleted = withManual.filter((item) => !isWishlist(item) && (item.stock || 0) === 0);
-      const replenishment = [];
-      depleted.forEach((item, index) => {
-        const key = `${item.name.trim().toLowerCase()}|${item.category}`;
-        if (activeKeys.has(key)) return;
-        activeKeys.add(key);
-        replenishment.push({ ...item, id: Date.now() + index + 1, qty: 1, unit: isStockOnly(item) ? "pcs" : item.unit, date: todayValue(), stock: 0, bought: false });
-      });
-      return [...replenishment, ...withManual];
+      return ensureDepletedShoppingItems(withManual);
     });
   const addWishlist = (form) => save((current) => [{ id: Date.now(), name: form.name, category: form.category, qty: 1, unit: `wishlist|${form.priority}|${form.kind}`, before: +form.budget, after: +form.budget, date: form.date, stock: 0, bought: false }, ...current]);
   const moveWishlist = (id) => save((current) => current.map((item) => item.id === id ? { ...item, unit: "pcs", date: item.date || todayValue(), qty: 1 } : item));
