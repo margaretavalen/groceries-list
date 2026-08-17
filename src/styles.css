@@ -59,7 +59,7 @@ header {
     color: var(--sage)
 }
 
-.brand svg {
+.brand>svg {
     width: 28px;
     height: 28px;
     stroke-width: 1.8
@@ -72,6 +72,43 @@ h2 {
 }
 
 .brand span {
+    font-size: 22px;
+    color: var(--ink)
+}
+
+.brand .brand-logo {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    color: #fff;
+    background: linear-gradient(145deg, #789b50, #587238);
+    box-shadow: 0 8px 18px rgba(80, 108, 52, .24)
+}
+
+.brand .brand-logo svg:first-child {
+    width: 22px;
+    height: 22px;
+    stroke-width: 2
+}
+
+.brand .brand-logo svg:last-child {
+    position: absolute;
+    width: 13px;
+    height: 13px;
+    right: -4px;
+    top: -4px;
+    padding: 2px;
+    border-radius: 50%;
+    color: #5d793c;
+    background: #eef4e5;
+    box-shadow: 0 0 0 2px #fff
+}
+
+.brand .brand-name {
     font-size: 22px;
     color: var(--ink)
 }

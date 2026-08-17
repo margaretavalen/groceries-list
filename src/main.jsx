@@ -239,8 +239,11 @@ function Header({ open, page, setPage }) {
   return (
     <header>
       <button className="brand" onClick={() => choose(() => setPage("overview"))}>
-        <ShoppingCart />
-        <span>Grocerie</span>
+        <span className="brand-logo" aria-hidden="true">
+          <ShoppingCart />
+          <Sprout />
+        </span>
+        <span className="brand-name">Grocerie</span>
       </button>
       <nav className={menuOpen ? "open" : ""} aria-label="Navigasi utama">
         <button
