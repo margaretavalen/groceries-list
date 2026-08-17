@@ -18,6 +18,8 @@ import {
   ListChecks,
   Clock3,
   Menu,
+  Heart,
+  ArrowRight,
 } from "lucide-react";
 import "./styles.css";
 
@@ -211,6 +213,11 @@ const todayValue = () => {
   return new Date(now - offset).toISOString().slice(0, 10);
 };
 const isStockOnly = (item) => item.unit === "stok-manual";
+const isWishlist = (item) => String(item.unit || "").startsWith("wishlist|");
+const wishlistMeta = (item) => {
+  const [, priority = "sedang", kind = "keinginan"] = String(item.unit || "").split("|");
+  return { priority, kind };
+};
 
 function IconBox({ tone = "green", children }) {
   return <span className={"icon-box " + tone}>{children}</span>;
@@ -269,6 +276,13 @@ function Header({ open, page, setPage }) {
           <Clock3 />
           <span>History</span>
         </button>
+        <button
+          className={page === "wishlist" ? "active" : ""}
+          onClick={() => choose(() => setPage("wishlist"))}
+        >
+          <Heart />
+          <span>Wishlist</span>
+        </button>
       </nav>
       <div className="head-actions">
         <label className="search">
@@ -291,7 +305,7 @@ function Header({ open, page, setPage }) {
   );
 }
 function Hero({ items, categories = cats }) {
-  const active = items.filter((x) => !x.bought && !isStockOnly(x)).length,
+  const active = items.filter((x) => !x.bought && !isStockOnly(x) && !isWishlist(x)).length,
     stock = items.reduce((s, x) => s + x.stock, 0),
     spent = items.filter((x) => x.bought).reduce((s, x) => s + x.after, 0);
   return (
@@ -334,7 +348,7 @@ function GroceryList({ items, checkout, remove, open }) {
   const grouped = useMemo(
     () =>
       Object.groupBy(
-        items.filter((x) => !x.bought && !isStockOnly(x)),
+        items.filter((x) => !x.bought && !isStockOnly(x) && !isWishlist(x)),
         (x) => x.category,
       ),
     [items],
@@ -445,7 +459,7 @@ function StockModal({ items, close, saveStocks }) {
     Object.fromEntries(items.map((item) => [item.id, item.stock || 0])),
   );
   const [manual, setManual] = useState({ name: "", category: cats[0], stock: 1 });
-  const stockItems = items;
+  const stockItems = items.filter((item) => !isWishlist(item));
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && close()}>
       <form
@@ -487,6 +501,41 @@ function StockModal({ items, close, saveStocks }) {
       </form>
     </div>
   );
+}
+function WishlistPage({ items, open, moveToList, remove }) {
+  const [priorityFilter, setPriorityFilter] = useState("semua");
+  const [kindFilter, setKindFilter] = useState("semua");
+  const wishlist = useMemo(
+    () => items.filter(isWishlist).filter((item) => {
+      const meta = wishlistMeta(item);
+      return (priorityFilter === "semua" || meta.priority === priorityFilter) && (kindFilter === "semua" || meta.kind === kindFilter);
+    }),
+    [items, priorityFilter, kindFilter],
+  );
+  const counts = items.filter(isWishlist).reduce((result, item) => {
+    const { priority } = wishlistMeta(item);
+    result[priority] = (result[priority] || 0) + 1;
+    return result;
+  }, {});
+  return (
+    <main className="wishlist-page">
+      <section className="wishlist-hero">
+        <div className="wishlist-heading"><span><Heart /></span><div><h1>Wishlist Belanja</h1><p>Simpan barang yang ingin dibeli dan tentukan mana yang paling penting.</p></div></div>
+        <button className="primary" onClick={open}><Plus /> Tambah wishlist</button>
+        <div className="wishlist-stats"><div><small>Prioritas tinggi</small><strong>{counts.tinggi || 0}</strong></div><div><small>Prioritas sedang</small><strong>{counts.sedang || 0}</strong></div><div><small>Prioritas rendah</small><strong>{counts.rendah || 0}</strong></div></div>
+      </section>
+      <section className="wishlist-toolbar">
+        <div><label>Prioritas<select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}><option value="semua">Semua</option><option value="tinggi">Tinggi</option><option value="sedang">Sedang</option><option value="rendah">Rendah</option></select></label><label>Jenis<select value={kindFilter} onChange={(e) => setKindFilter(e.target.value)}><option value="semua">Semua</option><option value="kebutuhan">Kebutuhan</option><option value="keinginan">Keinginan</option></select></label></div>
+        <span>{wishlist.length} barang</span>
+      </section>
+      {wishlist.length ? <section className="wishlist-grid">{wishlist.map((item) => { const meta = wishlistMeta(item); return <article className="wishlist-card" key={item.id}><div className="wishlist-card-top"><span className="wishlist-category"><i style={{ background: colorFor(item.category) }} />{item.category}</span><span className={`priority ${meta.priority}`}>{meta.priority}</span></div><div className="wishlist-card-icon"><Heart /></div><h2>{item.name}</h2><div className="wishlist-kind"><span>{meta.kind === "kebutuhan" ? "Kebutuhan" : "Keinginan"}</span><strong>{rupiah(item.before)}</strong></div><div className="wishlist-actions"><button className="move-wishlist" onClick={() => moveToList(item.id)}><ArrowRight /> Pindah ke belanja</button><button className="ghost" aria-label={`Hapus ${item.name}`} onClick={() => remove(item.id)}><Trash2 /></button></div></article>})}</section> : <section className="wishlist-empty"><Heart /><h2>Wishlist masih kosong</h2><p>Tambahkan barang yang ingin kamu beli nanti.</p><button className="primary" onClick={open}><Plus /> Tambah wishlist</button></section>}
+    </main>
+  );
+}
+function WishlistModal({ close, add }) {
+  const [form, setForm] = useState({ name: "", category: cats[0], priority: "sedang", kind: "kebutuhan", budget: "" });
+  const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  return <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && close()}><form className="modal wishlist-modal" onSubmit={(e) => { e.preventDefault(); add(form); close(); }}><div className="modal-head"><div><h2>Tambah wishlist</h2><p>Tandai prioritas dan bedakan kebutuhan dari keinginan.</p></div><button type="button" className="ghost" onClick={close}><X /></button></div><label>Nama barang<input autoFocus required value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Mis. Blender baru" /></label><div className="form-grid"><label>Kategori<select value={form.category} onChange={(e) => set("category", e.target.value)}>{cats.map((category) => <option key={category}>{category}</option>)}</select></label><label>Prioritas<select value={form.priority} onChange={(e) => set("priority", e.target.value)}><option value="tinggi">Tinggi</option><option value="sedang">Sedang</option><option value="rendah">Rendah</option></select></label><label>Jenis<select value={form.kind} onChange={(e) => set("kind", e.target.value)}><option value="kebutuhan">Kebutuhan</option><option value="keinginan">Keinginan</option></select></label><label>Perkiraan anggaran<input required min="0" type="number" value={form.budget} onChange={(e) => set("budget", +e.target.value)} placeholder="0" /></label></div><div className="modal-actions"><button type="button" className="secondary" onClick={close}>Batal</button><button className="primary"><Heart /> Simpan wishlist</button></div></form></div>;
 }
 function Calendar({ items }) {
   const current = todayValue();
@@ -1173,6 +1222,7 @@ function App() {
   const [modal, setModal] = useState(false);
   const [checkoutItem, setCheckoutItem] = useState(null);
   const [stockModal, setStockModal] = useState(false);
+  const [wishlistModal, setWishlistModal] = useState(false);
   useEffect(() => {
     let active = true;
     loadGoogleItems()
@@ -1211,11 +1261,15 @@ function App() {
       if (!manual) return updated;
       return [{ id: Date.now(), name: manual.name, category: manual.category, qty: 0, unit: "stok-manual", before: 0, after: 0, date: "", stock: manual.stock, bought: false }, ...updated];
     });
+  const addWishlist = (form) => save((current) => [{ id: Date.now(), name: form.name, category: form.category, qty: 1, unit: `wishlist|${form.priority}|${form.kind}`, before: +form.budget, after: +form.budget, date: "", stock: 0, bought: false }, ...current]);
+  const moveWishlist = (id) => save((current) => current.map((item) => item.id === id ? { ...item, unit: "pcs", date: todayValue(), qty: 1 } : item));
   return (
     <>
       <Header open={() => setModal(true)} page={page} setPage={setPage} />
       {page === "history" ? (
         <HistoryPage items={items} undo={undo} />
+      ) : page === "wishlist" ? (
+        <WishlistPage items={items} open={() => setWishlistModal(true)} moveToList={moveWishlist} remove={remove} />
       ) : (
         <main>
           <Hero items={items} />
@@ -1244,6 +1298,7 @@ function App() {
       )}
       {modal ? <Modal close={() => setModal(false)} add={add} /> : null}
       {stockModal ? <StockModal items={items} close={() => setStockModal(false)} saveStocks={saveStocks} /> : null}
+      {wishlistModal ? <WishlistModal close={() => setWishlistModal(false)} add={addWishlist} /> : null}
       {checkoutItem ? (
         <PurchaseModal
           item={checkoutItem}
