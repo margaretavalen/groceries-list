@@ -1266,8 +1266,17 @@ function App() {
   const saveStocks = (values, manual) =>
     save((current) => {
       const updated = current.map((item) => ({ ...item, stock: Math.max(0, +(values[item.id] ?? item.stock ?? 0)) }));
-      if (!manual) return updated;
-      return [{ id: Date.now(), name: manual.name, category: manual.category, qty: 0, unit: "stok-manual", before: 0, after: 0, date: "", stock: manual.stock, bought: false }, ...updated];
+      const withManual = manual ? [{ id: Date.now(), name: manual.name, category: manual.category, qty: 0, unit: "stok-manual", before: 0, after: 0, date: "", stock: manual.stock, bought: false }, ...updated] : updated;
+      const activeKeys = new Set(withManual.filter((item) => !item.bought && !isStockOnly(item) && !isWishlist(item)).map((item) => `${item.name.trim().toLowerCase()}|${item.category}`));
+      const depleted = withManual.filter((item) => !isWishlist(item) && (item.stock || 0) === 0);
+      const replenishment = [];
+      depleted.forEach((item, index) => {
+        const key = `${item.name.trim().toLowerCase()}|${item.category}`;
+        if (activeKeys.has(key)) return;
+        activeKeys.add(key);
+        replenishment.push({ ...item, id: Date.now() + index + 1, qty: 1, unit: isStockOnly(item) ? "pcs" : item.unit, date: todayValue(), stock: 0, bought: false });
+      });
+      return [...replenishment, ...withManual];
     });
   const addWishlist = (form) => save((current) => [{ id: Date.now(), name: form.name, category: form.category, qty: 1, unit: `wishlist|${form.priority}|${form.kind}`, before: +form.budget, after: +form.budget, date: form.date, stock: 0, bought: false }, ...current]);
   const moveWishlist = (id) => save((current) => current.map((item) => item.id === id ? { ...item, unit: "pcs", date: item.date || todayValue(), qty: 1 } : item));
