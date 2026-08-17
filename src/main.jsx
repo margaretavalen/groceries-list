@@ -244,6 +244,21 @@ const ensureDepletedShoppingItems = (items) => {
 
   return replenishment.length ? [...replenishment, ...items] : items;
 };
+const uniqueStockItems = (items) => {
+  const unique = new Map();
+  items.filter((item) => !isWishlist(item)).forEach((item) => {
+    const key = stockKey(item);
+    const current = unique.get(key);
+    if (
+      !current ||
+      isStockOnly(item) ||
+      (!isStockOnly(current) && Number(item.id) > Number(current.id))
+    ) {
+      unique.set(key, item);
+    }
+  });
+  return [...unique.values()];
+};
 const wishlistMeta = (item) => {
   const [, priority = "sedang", kind = "keinginan"] = String(item.unit || "").split("|");
   return { priority, kind };
@@ -446,16 +461,15 @@ function GroceryList({ items, checkout, remove, open }) {
   );
 }
 function Stock({ items, manage }) {
-  const rows = [...items]
-    .filter((item) => !isWishlist(item))
+  const rows = uniqueStockItems(items)
     .sort((a, b) => (b.stock || 0) - (a.stock || 0) || a.name.localeCompare(b.name));
   const max = Math.max(...rows.map((item) => item.stock || 0), 1);
   return (
     <section className="panel stock">
       <div className="panel-head">
         <div>
-          <h2>Daftar Stok</h2>
-          <p>{rows.length} barang</p>
+          <h2>Daftar Stok Semua Item</h2>
+          <p>{rows.length} barang · termasuk stok kosong</p>
         </div>
         <button className="text-btn" onClick={manage}>
           <Plus /> Kelola stok
@@ -482,7 +496,7 @@ function StockModal({ items, close, saveStocks }) {
     Object.fromEntries(items.map((item) => [item.id, item.stock || 0])),
   );
   const [manual, setManual] = useState({ name: "", category: cats[0], stock: 1 });
-  const stockItems = items.filter((item) => !isWishlist(item));
+  const stockItems = uniqueStockItems(items);
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && close()}>
       <form
